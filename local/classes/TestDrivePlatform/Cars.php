@@ -4,10 +4,13 @@ namespace TestDrivePlatform;
 use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ObjectPropertyException;
+use Bitrix\Main\ORM\Fields\Relations\Reference;
+use Bitrix\Main\ORM\Query\Join;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Type\DateTime;
+use ReflectionClass;
 use Throwable;
 
 Loader::includeModule("highloadblock");
@@ -316,4 +319,58 @@ class Cars
         }
     }
 
+    public static function getList($statusCode = null)
+    {
+        //Получаем блок Cars
+        $blockCars = HighloadBlockTable::getList([
+            'filter' => ['=TABLE_NAME' => 'Cars']
+        ])->fetch();
+        if (!$blockCars) {
+            throw new SystemException("HighloadBlock 'Cars' not found.");
+        }
+        $entityCarsDataClass = HighloadBlockTable::compileEntity($blockCars)->getDataClass();
+        //Получаем блок Statuses
+        $blockStatuses = HighloadBlockTable::getList([
+            'filter' => ['=TABLE_NAME' => 'Statuses']
+        ])->fetch();
+        if (!$blockStatuses) {
+            throw new SystemException("HighloadBlock 'Statuses' not found.");
+        }
+        $entityStatusesDataClass = HighloadBlockTable::compileEntity($blockStatuses)->getDataClass();
+
+        //Получаем список автомобилей
+        $filter = [];
+        $runtime = [];
+        if ($statusCode) {
+            $filter = [
+                '=STATUS_REF.UF_CODE' => $statusCode
+            ];
+        }
+        $result = $entityCarsDataClass::getList([
+            'select' => [
+                '*',
+                'STATUS_CODE' => 'STATUS_REF.UF_CODE'
+            ],
+            'filter' => $filter,
+            'runtime' => [
+                new Reference(
+                    'STATUS_REF',
+                    $entityStatusesDataClass,
+                    Join::on('this.UF_STATUS', 'ref.ID'),
+                    ['join_type' => 'left']
+                )
+            ]
+        ]);
+        //Заполняем данные для результата
+        $cars = [];
+        while ($item = $result->fetch()) {
+            $car['id'] = $item['ID'];
+            foreach (['model', 'year', 'vin', 'status'] as $fieldName) {
+                $car[$fieldName] = $item['UF_'.strtoupper($fieldName)];
+            }
+            $car['status_code'] = $item['STATUS_CODE'];
+            $cars[] = $car;
+        }
+        return $cars;
+    }
 }
