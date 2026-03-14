@@ -3,7 +3,13 @@ use Bitrix\Main\EventManager;
 use Bitrix\Main\ORM\EntityError;
 use Bitrix\Main\ORM\Event;
 use Bitrix\Main\ORM\EventResult;
-use Bitrix\Highloadblock;
+use Bitrix\Highloadblock\HighloadBlockTable;
+
+Bitrix\Main\Loader::registerNamespace(
+    'TestDrivePlatform',
+    $_SERVER["DOCUMENT_ROOT"].'/local/classes/TestDrivePlatform/',
+);
+
 EventManager::getInstance()->addEventHandler(
     '',
     CarsUniqueFieldBlockValidator::HL_BLOCK_NAME.'OnBeforeAdd',
@@ -36,7 +42,7 @@ class CarsUniqueFieldBlockValidator
         $entity = $event->getEntity();
 
         // Получаем блок
-        $block = Highloadblock\HighloadBlockTable::getList([
+        $block = HighloadBlockTable::getList([
             'filter' => ['=TABLE_NAME' => static::HL_BLOCK_NAME]
         ])->fetch();
 
@@ -59,7 +65,7 @@ class CarsUniqueFieldBlockValidator
             $filter = ['=' . $fieldName => $uniqueValue];
 
             //Ищем дубликат
-            $hlEntity = Highloadblock\HighloadBlockTable::compileEntity($block);
+            $hlEntity = HighloadBlockTable::compileEntity($block);
             $hlDataClass = $hlEntity->getDataClass();
             $existingItem = $hlDataClass::getList([
                 'select' => ['ID'],
@@ -71,7 +77,7 @@ class CarsUniqueFieldBlockValidator
             if ($existingItem) {
                 $fieldTitle = $entity->getField($fieldName)->getTitle();
                 $result->addError(new EntityError(
-                    "Элемент с таким значением в поле «{$fieldTitle}» уже существует."
+                    "Элемент со значением {$uniqueValue} в поле «{$fieldTitle}» уже существует."
                 ));
             }
         }
