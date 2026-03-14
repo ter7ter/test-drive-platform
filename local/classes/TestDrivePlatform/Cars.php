@@ -7,6 +7,7 @@ use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
+use Bitrix\Main\Type\DateTime;
 use Throwable;
 
 Loader::includeModule("highloadblock");
@@ -142,6 +143,17 @@ class Cars
         }
     }
 
+    /**
+     * Создание сразу нескольких авто
+     *
+     * @param $data
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws Throwable
+     * @throws \Bitrix\Main\DB\SqlQueryException
+     */
     public static function createMany($data) {
         //Получаем блок статусов
         $blockStatuses = HighloadBlockTable::getList([
@@ -202,6 +214,15 @@ class Cars
         }
     }
 
+    /**
+     * Редактирование информации об авто
+     * обновляет поля UF_STATUS и UF_PRICE_PER_DAY
+     *
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
     public function update()
     {
         //Получаем id статуса
@@ -242,6 +263,56 @@ class Cars
         );
         if (!$result->isSuccess()) {
             throw new SystemException(implode(', ', $result->getErrorMessages()));
+        }
+    }
+
+    public function delete()
+    {
+        //Проверяем бронирования авто
+        $blockTestDrives = HighloadBlockTable::getList([
+            'filter' => ['=TABLE_NAME' => 'test_drives']
+        ])->fetch();
+        if (!$blockTestDrives) {
+            throw new SystemException("HighloadBlock 'TestDrives' not found.");
+        }
+        $entityTestDrivesClass = HighloadBlockTable::compileEntity($blockTestDrives)->getDataClass();
+        $result = $entityTestDrivesClass::getList([
+                'select' => ['ID'],
+                'filter' => [
+                    '=UF_CAR' => $this->id,
+                    '>UF_DATE_END' => new DateTime()
+                ]
+            ]);
+        if ($result->fetch()) {
+            throw new SystemException("Невозможно удалить этот автомобиль - на него есть незавершённые бронирования.");
+        }
+        $db = Application::getConnection();
+        $db->startTransaction();
+        try {
+            //Сначала удаляем бронирования
+            $result = $entityTestDrivesClass::getList([
+                'select' => ['ID'],
+                'filter' => [
+                    '=UF_CAR' => $this->id,
+                ]
+            ]);
+            while ($testDrive = $result->fetch()) {
+                $entityTestDrivesClass::delete($testDrive['ID']);
+            }
+
+            //Удаляем само авто
+            $blockCars = HighloadBlockTable::getList([
+                'filter' => ['=TABLE_NAME' => 'Cars']
+            ])->fetch();
+            if (!$blockCars) {
+                throw new SystemException("HighloadBlock 'Cars' not found.");
+            }
+            $entityCarsDataClass = HighloadBlockTable::compileEntity($blockCars)->getDataClass();
+            $entityCarsDataClass::delete($this->id);
+            $db->commitTransaction();
+        } catch (Throwable $e) {
+            $db->rollbackTransaction();
+            throw $e;
         }
     }
 

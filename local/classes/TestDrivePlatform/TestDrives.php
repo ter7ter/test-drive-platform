@@ -9,6 +9,17 @@ use Protobuf\Exception;
 
 class TestDrives
 {
+    /**
+     * Создание нового бронирования авто на тест-драйв
+     *
+     * @param Cars $car
+     * @param $dateStart
+     * @param $dateEnd
+     * @return void
+     * @throws SystemException
+     * @throws \Bitrix\Main\ArgumentException
+     * @throws \Bitrix\Main\ObjectPropertyException
+     */
     public static function create(Cars $car, $dateStart, $dateEnd) {
         //Проверяем не в ремонте ли
         if ($car->statusCode == 'repair') {
@@ -31,8 +42,7 @@ class TestDrives
         } catch (SystemException $e) {
             throw new SystemException("Неверный формат даты");
         }
-        $result = $entityTestDrivesClass::getList(
-            [
+        $result = $entityTestDrivesClass::getList([
                 'select' => ['UF_DATE_START', 'UF_DATE_END'],
                 'filter' =>
                     [
@@ -40,8 +50,7 @@ class TestDrives
                         '<=UF_DATE_START' => $startDateTime,
                         '>=UF_DATE_END' => $endDateTime,
                     ]
-            ]
-        );
+            ]);
         if ($data = $result->fetch()) {
             $errorMessage = "Этот авто уже забронирован в этом интервале. Занятые даты:\n";
             while ($data) {
@@ -58,14 +67,12 @@ class TestDrives
         $totalCost = $car->price_per_day*$daysCount;
 
         //Создаём бронирование
-        $result = $entityTestDrivesClass::add(
-            [
+        $result = $entityTestDrivesClass::add([
                 'UF_CAR' => $car->id,
                 'UF_DATE_START' => $startDateTime,
                 'UF_DATE_END' => $endDateTime,
                 'UF_TOTAL_COST' => $totalCost
-            ]
-        );
+            ]);
         if (!$result->isSuccess()) {
             throw new SystemException(implode(', ', $result->getErrorMessages()));
         }
