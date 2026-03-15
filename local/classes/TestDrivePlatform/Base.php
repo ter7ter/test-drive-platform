@@ -15,7 +15,7 @@ class Base
      * @throws \Bitrix\Main\ArgumentException
      * @throws \Bitrix\Main\ObjectPropertyException
      */
-    public static function loadBlocks(array $blocks): array
+    protected static function loadBlocks(array $blocks): array
     {
         $result = [];
         foreach ($blocks as $block) {

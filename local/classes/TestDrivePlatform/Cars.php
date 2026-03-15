@@ -1,7 +1,6 @@
 <?php
 namespace TestDrivePlatform;
 
-use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\ORM\Fields\Relations\Reference;
@@ -16,12 +15,12 @@ Loader::includeModule("highloadblock");
 
 class Cars extends Base
 {
-    public int $id;
-    public string $model;
-    public int $year;
-    public string $vin;
-    public string $status_code;
-    public string $price_per_day;
+    public ?int $id = null;
+    public ?string $model;
+    public ?int $year;
+    public ?string $vin;
+    public ?string $status_code;
+    public ?string $price_per_day;
 
     /**
      * Конструктор, получает авто по id
@@ -54,7 +53,7 @@ class Cars extends Base
         ]);
         $carData = $result->fetch();
         if (!$carData) {
-            throw new SystemException("Car id {$id} not found.");
+            return ;
         }
         $this->id = $id;
         foreach (['model', 'year', 'vin', 'price_per_day', 'status_code'] as $fieldName) {
@@ -132,23 +131,23 @@ class Cars extends Base
         $statusIds = [];
         $addCarsData = [];
         foreach ($data as $item) {
-            if (!isset($statusIds[$item['statusCode']])) {
+            if (!isset($statusIds[$item['status_code']])) {
                 $statusItem = $statusesDataClass::getList([
-                    'filter' => ['=UF_CODE' => $item['statusCode']],
+                    'filter' => ['=UF_CODE' => $item['status_code']],
                     'select' => ['ID'],
                     'limit' => 1
                 ])->fetch();
                 if ($statusItem) {
-                    $statusIds[$item['statusCode']] = $statusItem['ID'];
+                    $statusIds[$item['status_code']] = $statusItem['ID'];
                 } else {
-                    throw new SystemException("Status with code '{$item['stausCode']}' not found");
+                    throw new SystemException("Status with code '{$item['status_code']}' not found");
                 }
             }
             $addCarsData[] = [
                 'UF_MODEL' => $item['model'],
                 'UF_YEAR' => $item['year'],
                 'UF_VIN' => $item['vin'],
-                'UF_STATUS' => $statusIds[$item['statusCode']],
+                'UF_STATUS' => $statusIds[$item['status_code']],
                 'UF_PRICE_PER_DAY' => $item['price_per_day'],
             ];
         }

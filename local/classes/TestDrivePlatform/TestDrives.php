@@ -22,7 +22,7 @@ class TestDrives extends Base
      * @throws \Bitrix\Main\ArgumentException
      * @throws \Bitrix\Main\ObjectPropertyException
      */
-    public static function create(Cars $car, $dateStart, $dateEnd): void
+    public static function create(Cars $car, string $dateStart, string $dateEnd): void
     {
         //Проверяем не в ремонте ли
         if ($car->status_code == 'repair') {
@@ -30,12 +30,12 @@ class TestDrives extends Base
         }
 
         //Получаем блок бронирований
-        [$testDrivesDataClass] = static::loadBlocks(['Cars', 'test_drives']);
+        [$testDrivesDataClass] = static::loadBlocks(['test_drives']);
 
         //Проверяем не забронировано ли уже авто на эти даты
         try {
-            $startDateTime = new DateTime($dateStart);
-            $endDateTime = new DateTime($dateEnd);
+            $startDateTime = new DateTime($dateStart, 'Y-m-d H:i:s');
+            $endDateTime = new DateTime($dateEnd, 'Y-m-d H:i:s');
         } catch (SystemException $e) {
             throw new SystemException("Неверный формат даты");
         }
