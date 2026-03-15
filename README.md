@@ -1,8 +1,7 @@
 В задании обязательными полями указаны только "Модель автомобиля" (для Cars) и ID автомобиля (для TestDrives), но в API для запросов создания авто и бронирований при валидации сделал все поля обязательными т.к. это следует из логики работы и без большинства полей функционал просто не будет работать(например без стоимости тест-драйва в день или дат невозможно расчитать стоимость бронирования)
 
   
-Коллекция Postman для тестирования
-[TestDrivePlatform Test API.postman_collection.json](TestDrivePlatform%20Test API.postman_collection.json)  
+Коллекция Postman для тестирования - файл TestDrivePlatform Test API.postman_collection.json
 
 Описание API [API.md](API.md)
 
