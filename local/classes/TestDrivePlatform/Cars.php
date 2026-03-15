@@ -218,7 +218,7 @@ class Cars extends Base
     public function delete(): void
     {
         //Получаем блоки
-        [$carsDataClass, $testDrivesDataClass] = static::loadBlocks(['Cars', 'test_drives']);
+        [$carsDataClass, $testDrivesDataClass] = static::loadBlocks(['Cars', 'TestDrives']);
 
         //Проверяем бронирования авто
         $result = $testDrivesDataClass::getList([

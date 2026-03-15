@@ -20,7 +20,7 @@ class Base
         $result = [];
         foreach ($blocks as $block) {
             $blockTable = HighloadBlockTable::getList([
-                'filter' => ['=TABLE_NAME' => $block]
+                'filter' => ['=NAME' => $block]
             ])->fetch();
             if (!$blockTable) {
                 throw new SystemException("HighloadBlock '{$block}' not found.");

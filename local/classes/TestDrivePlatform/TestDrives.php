@@ -30,7 +30,7 @@ class TestDrives extends Base
         }
 
         //Получаем блок бронирований
-        [$testDrivesDataClass] = static::loadBlocks(['test_drives']);
+        [$testDrivesDataClass] = static::loadBlocks(['TestDrives']);
 
         //Проверяем не забронировано ли уже авто на эти даты
         try {
