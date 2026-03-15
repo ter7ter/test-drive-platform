@@ -10,18 +10,17 @@ use Bitrix\Main\SystemException;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Application;
 use Bitrix\Main\Type\DateTime;
-use ReflectionClass;
 use Throwable;
 
 Loader::includeModule("highloadblock");
 
-class Cars
+class Cars extends Base
 {
     public int $id;
     public string $model;
     public int $year;
     public string $vin;
-    public string $statusCode;
+    public string $status_code;
     public string $price_per_day;
 
     /**
@@ -33,48 +32,34 @@ class Cars
      */
     public function __construct(int $id)
     {
-        //Получаем блок Cars
-        $blockCars = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Cars']
-        ])->fetch();
-        if (!$blockCars) {
-            throw new SystemException("HighloadBlock 'Cars' not found.");
-        }
-        $entityCars = HighloadBlockTable::compileEntity($blockCars);
-        $entityCarsDataClass = $entityCars->getDataClass();
+        //Загружаем блоки
+        [$carsDataClass, $statusesDataClass] = static::loadBlocks(['Cars', 'Statuses']);
 
         //Получаем данные
-        $result = $entityCarsDataClass::getList([
+        $result = $carsDataClass::getList([
+            'select' => [
+                '*',
+                'UF_STATUS_CODE' => 'STATUS_REF.UF_CODE'
+            ],
             'filter' => ['=ID' => $id],
-            'limit' => 1
+            'limit' => 1,
+            'runtime' => [
+                new Reference(
+                    'STATUS_REF',
+                    $statusesDataClass,
+                    Join::on('this.UF_STATUS', 'ref.ID'),
+                    ['join_type' => 'left']
+                )
+            ]
         ]);
         $carData = $result->fetch();
         if (!$carData) {
             throw new SystemException("Car id {$id} not found.");
         }
         $this->id = $id;
-        foreach (['model', 'year', 'vin', 'price_per_day'] as $fieldName) {
+        foreach (['model', 'year', 'vin', 'price_per_day', 'status_code'] as $fieldName) {
             $this->$fieldName = $carData['UF_'.strtoupper($fieldName)];
         }
-
-        //Получаем статус
-        $blockStatuses = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Statuses']
-        ])->fetch();
-        if (!$blockStatuses) {
-            throw new SystemException("HighloadBlock 'Statuses' not found.");
-        }
-        $statusEntity = HighloadBlockTable::compileEntity($blockStatuses);
-        $statusDataClass = $statusEntity->getDataClass();
-        $statusItem = $statusDataClass::getList([
-            'filter' => ['=ID' => $carData['UF_STATUS']],
-            'select' => ['UF_CODE'],
-            'limit' => 1
-        ])->fetch();
-        if (!$statusItem) {
-            throw new SystemException("Status {$carData['UF_STATUS']} not found in 'Statuses'.");
-        }
-        $this->statusCode = $statusItem['UF_CODE'];
     }
 
     /**
@@ -98,17 +83,11 @@ class Cars
         int    $price_per_day
     ): void
     {
-        //Получаем статус
-        $blockStatuses = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Statuses']
-        ])->fetch();
-        if (!$blockStatuses) {
-            throw new SystemException("HighloadBlock 'Statuses' not found.");
-        }
+        //Загружаем блоки
+        [$carsDataClass, $statusesDataClass] = static::loadBlocks(['Cars', 'Statuses']);
 
-        $statusEntity = HighloadBlockTable::compileEntity($blockStatuses);
-        $statusDataClass = $statusEntity->getDataClass();
-        $statusItem = $statusDataClass::getList([
+        //Получаем ID статуса
+        $statusItem = $statusesDataClass::getList([
             'filter' => ['=UF_CODE' => $statusCode],
             'select' => ['ID'],
             'limit' => 1
@@ -120,27 +99,14 @@ class Cars
             throw new SystemException("Status with code '{$statusCode}' not found");
         }
 
-        //Получаем блок Cars
-        $blockCars = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Cars']
-        ])->fetch();
-        if (!$blockCars) {
-            throw new SystemException("HighloadBlock 'Cars' not found.");
-        }
-        $entityCars = HighloadBlockTable::compileEntity($blockCars);
-        $entityCarsDataClass = $entityCars->getDataClass();
-
-        // 3. Prepare fields for the new Car element
-        $elementFields = array(
+        //Добавляем элемент в Cars
+        $result = $carsDataClass::add([
             'UF_MODEL' => $model,
             'UF_YEAR' => $year,
             'UF_VIN' => $vin,
             'UF_STATUS' => $statusId,
             'UF_PRICE_PER_DAY' => $price_per_day,
-        );
-
-        //Добавляем элемент в Cars
-        $result = $entityCarsDataClass::add($elementFields);
+        ]);
         if (!$result->isSuccess()) {
             throw new SystemException(implode(', ', $result->getErrorMessages()));
         }
@@ -157,23 +123,17 @@ class Cars
      * @throws Throwable
      * @throws \Bitrix\Main\DB\SqlQueryException
      */
-    public static function createMany($data) {
-        //Получаем блок статусов
-        $blockStatuses = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Statuses']
-        ])->fetch();
-        if (!$blockStatuses) {
-            throw new SystemException("HighloadBlock 'Statuses' not found.");
-        }
-        $statusEntity = HighloadBlockTable::compileEntity($blockStatuses);
-        $statusDataClass = $statusEntity->getDataClass();
+    public static function createMany(array $data): void
+    {
+        //Загружаем блоки
+        [$carsDataClass, $statusesDataClass] = static::loadBlocks(['Cars', 'Statuses']);
 
         //Получаем id статусов для всех машин и формируем данные для добавления
         $statusIds = [];
         $addCarsData = [];
         foreach ($data as $item) {
             if (!isset($statusIds[$item['statusCode']])) {
-                $statusItem = $statusDataClass::getList([
+                $statusItem = $statusesDataClass::getList([
                     'filter' => ['=UF_CODE' => $item['statusCode']],
                     'select' => ['ID'],
                     'limit' => 1
@@ -193,20 +153,10 @@ class Cars
             ];
         }
 
-        //Получаем блок Cars
-        $blockCars = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Cars']
-        ])->fetch();
-        if (!$blockCars) {
-            throw new SystemException("HighloadBlock 'Cars' not found.");
-        }
-        $entityCars = HighloadBlockTable::compileEntity($blockCars);
-        $entityCarsDataClass = $entityCars->getDataClass();
-
         $db = Application::getConnection();
         try {
             $db->startTransaction();
-            $result = $entityCarsDataClass::addMulti($addCarsData);
+            $result = $carsDataClass::addMulti($addCarsData);
             if (!$result->isSuccess()) {
                 throw new SystemException(implode(', ', $result->getErrorMessages()));
             }
@@ -226,38 +176,25 @@ class Cars
      * @throws ObjectPropertyException
      * @throws SystemException
      */
-    public function update()
+    public function update(): void
     {
-        //Получаем id статуса
-        $blockStatuses = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Statuses']
-        ])->fetch();
-        if (!$blockStatuses) {
-            throw new SystemException("HighloadBlock 'Statuses' not found.");
-        }
-        $statusEntity = HighloadBlockTable::compileEntity($blockStatuses);
-        $statusDataClass = $statusEntity->getDataClass();
-        $statusItem = $statusDataClass::getList([
-            'filter' => ['=UF_CODE' => $this->statusCode],
+        //Получаем блоки
+        [$carsDataClass, $statusesDataClass] = static::loadBlocks(['Cars', 'Statuses']);
+
+        //Получем статус
+        $statusItem = $statusesDataClass::getList([
+            'filter' => ['=UF_CODE' => $this->status_code],
             'select' => ['ID'],
             'limit' => 1
         ])->fetch();
         if ($statusItem) {
             $statusId = $statusItem['ID'];
         } else {
-            throw new SystemException("Status with code '{$item['stausCode']}' not found");
+            throw new SystemException("Status with code '{$this->status_code}' not found");
         }
 
-        //Получаем блок Cars
-        $blockCars = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Cars']
-        ])->fetch();
-        if (!$blockCars) {
-            throw new SystemException("HighloadBlock 'Cars' not found.");
-        }
-        $entityCars = HighloadBlockTable::compileEntity($blockCars);
-        $entityCarsDataClass = $entityCars->getDataClass();
-        $result = $entityCarsDataClass::update(
+        //Обновляем информацию
+        $result = $carsDataClass::update(
             $this->id,
             [
                 'UF_STATUS' => $statusId,
@@ -269,17 +206,23 @@ class Cars
         }
     }
 
-    public function delete()
+    /**
+     * Удаляет автомобиль и его бронирования, с проверкой будущих бронирований
+     *
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws Throwable
+     * @throws \Bitrix\Main\DB\SqlQueryException
+     */
+    public function delete(): void
     {
+        //Получаем блоки
+        [$carsDataClass, $testDrivesDataClass] = static::loadBlocks(['Cars', 'test_drives']);
+
         //Проверяем бронирования авто
-        $blockTestDrives = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'test_drives']
-        ])->fetch();
-        if (!$blockTestDrives) {
-            throw new SystemException("HighloadBlock 'TestDrives' not found.");
-        }
-        $entityTestDrivesClass = HighloadBlockTable::compileEntity($blockTestDrives)->getDataClass();
-        $result = $entityTestDrivesClass::getList([
+        $result = $testDrivesDataClass::getList([
                 'select' => ['ID'],
                 'filter' => [
                     '=UF_CAR' => $this->id,
@@ -293,25 +236,18 @@ class Cars
         $db->startTransaction();
         try {
             //Сначала удаляем бронирования
-            $result = $entityTestDrivesClass::getList([
+            $result = $testDrivesDataClass::getList([
                 'select' => ['ID'],
                 'filter' => [
                     '=UF_CAR' => $this->id,
                 ]
             ]);
             while ($testDrive = $result->fetch()) {
-                $entityTestDrivesClass::delete($testDrive['ID']);
+                $testDrivesDataClass::delete($testDrive['ID']);
             }
 
             //Удаляем само авто
-            $blockCars = HighloadBlockTable::getList([
-                'filter' => ['=TABLE_NAME' => 'Cars']
-            ])->fetch();
-            if (!$blockCars) {
-                throw new SystemException("HighloadBlock 'Cars' not found.");
-            }
-            $entityCarsDataClass = HighloadBlockTable::compileEntity($blockCars)->getDataClass();
-            $entityCarsDataClass::delete($this->id);
+            $carsDataClass::delete($this->id);
             $db->commitTransaction();
         } catch (Throwable $e) {
             $db->rollbackTransaction();
@@ -319,43 +255,37 @@ class Cars
         }
     }
 
-    public static function getList($statusCode = null)
+    /**
+     * Получает список автомобилей
+     *
+     * @param $statusCode
+     * @return array
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     */
+    public static function getList($statusCode = null): array
     {
-        //Получаем блок Cars
-        $blockCars = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Cars']
-        ])->fetch();
-        if (!$blockCars) {
-            throw new SystemException("HighloadBlock 'Cars' not found.");
-        }
-        $entityCarsDataClass = HighloadBlockTable::compileEntity($blockCars)->getDataClass();
-        //Получаем блок Statuses
-        $blockStatuses = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'Statuses']
-        ])->fetch();
-        if (!$blockStatuses) {
-            throw new SystemException("HighloadBlock 'Statuses' not found.");
-        }
-        $entityStatusesDataClass = HighloadBlockTable::compileEntity($blockStatuses)->getDataClass();
+        //Получаем блоки
+        [$carsDataClass, $statusesDataClass] = static::loadBlocks(['Cars', 'Statuses']);
 
         //Получаем список автомобилей
         $filter = [];
-        $runtime = [];
         if ($statusCode) {
             $filter = [
                 '=STATUS_REF.UF_CODE' => $statusCode
             ];
         }
-        $result = $entityCarsDataClass::getList([
+        $result = $carsDataClass::getList([
             'select' => [
                 '*',
-                'STATUS_CODE' => 'STATUS_REF.UF_CODE'
+                'UF_STATUS_CODE' => 'STATUS_REF.UF_CODE'
             ],
             'filter' => $filter,
             'runtime' => [
                 new Reference(
                     'STATUS_REF',
-                    $entityStatusesDataClass,
+                    $statusesDataClass,
                     Join::on('this.UF_STATUS', 'ref.ID'),
                     ['join_type' => 'left']
                 )
@@ -365,10 +295,9 @@ class Cars
         $cars = [];
         while ($item = $result->fetch()) {
             $car['id'] = $item['ID'];
-            foreach (['model', 'year', 'vin', 'status'] as $fieldName) {
+            foreach (['model', 'year', 'vin', 'status', 'status_code'] as $fieldName) {
                 $car[$fieldName] = $item['UF_'.strtoupper($fieldName)];
             }
-            $car['status_code'] = $item['STATUS_CODE'];
             $cars[] = $car;
         }
         return $cars;

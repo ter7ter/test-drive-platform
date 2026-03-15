@@ -3,11 +3,13 @@
 namespace TestDrivePlatform;
 
 use Bitrix\Highloadblock\HighloadBlockTable;
+use Bitrix\Main\Loader;
 use Bitrix\Main\SystemException;
 use Bitrix\Main\Type\DateTime;
-use Protobuf\Exception;
 
-class TestDrives
+Loader::includeModule("highloadblock");
+
+class TestDrives extends Base
 {
     /**
      * Создание нового бронирования авто на тест-драйв
@@ -20,20 +22,15 @@ class TestDrives
      * @throws \Bitrix\Main\ArgumentException
      * @throws \Bitrix\Main\ObjectPropertyException
      */
-    public static function create(Cars $car, $dateStart, $dateEnd) {
+    public static function create(Cars $car, $dateStart, $dateEnd): void
+    {
         //Проверяем не в ремонте ли
-        if ($car->statusCode == 'repair') {
+        if ($car->status_code == 'repair') {
             throw new SystemException("Этот авто в ремонте");
         }
 
-        //Получаем блок TestDrives
-        $blockTestDrives = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => 'test_drives']
-        ])->fetch();
-        if (!$blockTestDrives) {
-            throw new SystemException("HighloadBlock 'TestDrives' not found.");
-        }
-        $entityTestDrivesClass = HighloadBlockTable::compileEntity($blockTestDrives)->getDataClass();
+        //Получаем блок бронирований
+        [$testDrivesDataClass] = static::loadBlocks(['Cars', 'test_drives']);
 
         //Проверяем не забронировано ли уже авто на эти даты
         try {
@@ -42,7 +39,7 @@ class TestDrives
         } catch (SystemException $e) {
             throw new SystemException("Неверный формат даты");
         }
-        $result = $entityTestDrivesClass::getList([
+        $result = $testDrivesDataClass::getList([
                 'select' => ['UF_DATE_START', 'UF_DATE_END'],
                 'filter' =>
                     [
@@ -67,7 +64,7 @@ class TestDrives
         $totalCost = $car->price_per_day*$daysCount;
 
         //Создаём бронирование
-        $result = $entityTestDrivesClass::add([
+        $result = $testDrivesDataClass::add([
                 'UF_CAR' => $car->id,
                 'UF_DATE_START' => $startDateTime,
                 'UF_DATE_END' => $endDateTime,
