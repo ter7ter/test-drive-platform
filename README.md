@@ -6,6 +6,8 @@
 
 Описание API [API.md](API.md)
 
+Дамп базы [bitrix_db.sql](bitrix_db.sql)
+
 Логин и пароль администратора Bitrix
 ```
 admin 123456
