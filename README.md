@@ -2,7 +2,7 @@
 
   
 Коллекция Postman для тестирования
-[TestDrivePlatform Test API.postman_collection.json](TestDrivePlatform Test API.postman_collection.json)  
+[TestDrivePlatform Test API.postman_collection.json](TestDrivePlatform%20Test API.postman_collection.json)  
 
 Описание API [API.md](API.md)
 
