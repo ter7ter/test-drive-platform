@@ -42,7 +42,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/cars/1",
+              "raw": "{{base_url}}/api/v1/cars/23",
               "host": [
                 "{{base_url}}"
               ],
@@ -50,7 +50,7 @@
                 "api",
                 "v1",
                 "cars",
-                "1"
+                "23"
               ]
             },
             "description": "Получение конкретного автомобиля по ID"
@@ -67,7 +67,7 @@
               "urlencoded": [
                 {
                   "key": "status_code",
-                  "value": "maintenance",
+                  "value": "available",
                   "type": "text"
                 },
                 {
@@ -78,7 +78,7 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/cars/1",
+              "raw": "{{base_url}}/api/v1/cars/23",
               "host": [
                 "{{base_url}}"
               ],
@@ -86,7 +86,7 @@
                 "api",
                 "v1",
                 "cars",
-                "1"
+                "23"
               ]
             },
             "description": "Обновление автомобиля"
@@ -103,17 +103,17 @@
               "urlencoded": [
                 {
                   "key": "model",
-                  "value": "New Model S",
+                  "value": "Test Car 2",
                   "type": "text"
                 },
                 {
                   "key": "year",
-                  "value": "2025",
+                  "value": "2026",
                   "type": "text"
                 },
                 {
                   "key": "vin",
-                  "value": "NEWVIN123456",
+                  "value": "NEWVIN111113",
                   "type": "text"
                 },
                 {
@@ -123,7 +123,7 @@
                 },
                 {
                   "key": "price_per_day",
-                  "value": "200",
+                  "value": "2000",
                   "type": "text"
                 }
               ]
@@ -174,7 +174,7 @@
                 },
                 {
                   "key": "cars[0][price_per_day]",
-                  "value": "180",
+                  "value": "3000",
                   "type": "text"
                 },
                 {
@@ -199,7 +199,7 @@
                 },
                 {
                   "key": "cars[1][price_per_day]",
-                  "value": "160",
+                  "value": "2500",
                   "type": "text"
                 }
               ]
@@ -226,7 +226,7 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/cars/1",
+              "raw": "{{base_url}}/api/v1/cars/24",
               "host": [
                 "{{base_url}}"
               ],
@@ -234,7 +234,7 @@
                 "api",
                 "v1",
                 "cars",
-                "1"
+                "24"
               ]
             },
             "description": "Удаление автомобиля"
@@ -256,17 +256,17 @@
               "urlencoded": [
                 {
                   "key": "car_id",
-                  "value": "1",
+                  "value": "23",
                   "type": "text"
                 },
                 {
                   "key": "date_start",
-                  "value": "2026-03-20 10:00:00",
+                  "value": "2026-03-16 10:00:00",
                   "type": "text"
                 },
                 {
                   "key": "date_end",
-                  "value": "2026-03-20 12:00:00",
+                  "value": "2026-03-19 18:00:00",
                   "type": "text"
                 }
               ]

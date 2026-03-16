@@ -43,7 +43,7 @@ class CarsUniqueFieldBlockValidator
 
         // Получаем блок
         $block = HighloadBlockTable::getList([
-            'filter' => ['=TABLE_NAME' => static::HL_BLOCK_NAME]
+            'filter' => ['=NAME' => static::HL_BLOCK_NAME]
         ])->fetch();
 
         // Если блок не найден - выходим

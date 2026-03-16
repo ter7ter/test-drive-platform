@@ -16,11 +16,11 @@ Loader::includeModule("highloadblock");
 class Cars extends Base
 {
     public ?int $id = null;
-    public ?string $model;
-    public ?int $year;
-    public ?string $vin;
-    public ?string $status_code;
-    public ?string $price_per_day;
+    public string $model;
+    public int $year;
+    public string $vin;
+    public string $status_code;
+    public string $price_per_day;
 
     /**
      * Конструктор, получает авто по id
